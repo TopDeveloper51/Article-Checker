@@ -53,11 +53,26 @@ def convert_to_html(content):
         elif 'table' in element:
             html_output += parse_table(element['table'])
 
-    print('HTML output----------', html_output)
     return html_output
 
 html_content = convert_to_html(body_content)
 print(html_content)
+
+def find_key_in_object(obj, key_to_find):
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            if key == key_to_find:
+                return True, value
+            if isinstance(value, (dict, list)):
+                found = find_key_in_object(value, key_to_find)
+                if found:
+                    return True
+    elif isinstance(obj, list):
+        for item in obj:
+            found = find_key_in_object(item, key_to_find)
+            if found:
+                return True
+    return False
 
 def analyze_content(content):
     meta_title = ''
@@ -74,20 +89,23 @@ def analyze_content(content):
                     currentText = text_run['textRun']['content']
                     print('Current Text:', text_run['textRun'])
                     text += text_run['textRun']['content']
-                    
+
+                    if find_key_in_object(text_run['textRun'], 'link'):
+                        num_links += 1
+
                     if triger == 1:
                         meta_title = currentText.strip()
                         triger = 0
+
                     if currentText.startswith('Meta Title'):
                         triger = 1
+
                     if triger == 2:
                         meta_description = currentText.strip()
                         triger = 0
+
                     if currentText.startswith('Meta Description'):
                         triger = 2
-                
-                if 'textRun' in text_run and 'link' in text_run['textRun']:
-                    num_links += 1
         if 'inlineObjectElement' in element:
             num_images += 1                
 
@@ -134,5 +152,5 @@ def create_airtable_record(meta_title, meta_description, article_title, article_
     response = requests.post(url, headers=headers, json=data)
     return response.json()
 
-response = create_airtable_record('Sample Meta Title', 'Sample Meta Description', 'Sample Article Title', '<html>Sample Article HTML</html>')
+response = create_airtable_record(meta_title, meta_description, meta_title, html_content)
 print(response)
