@@ -1,6 +1,4 @@
 
-# Online Python - IDE, Editor, Compiler, Interpreter
-
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 import re
@@ -9,6 +7,9 @@ import requests
 SCOPES = ["https://www.googleapis.com/auth/documents.readonly"]
 DOCUMENT_ID = '1s0fZsDcXJtiwrqUT1fVInS6q1yCZwVKkyCEGcxUiIYY'
 SERVICE_ACCOUNT_FILE = 'service_account.json'
+AIRTABLE_API_KEY = 'path2jOW60n6g5GW2.45fa94260cc890f923ae9f9e1b1d03cb6dd78f7f2718c8e0a0dcf26c9840f42e'
+BASE_ID = 'appzqKDYxyqTHjcmT'
+TABLE_NAME = 'Articles'
 
 credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 service = build("docs", 'v1', credentials=credentials)
@@ -17,8 +18,6 @@ def extract_body_content(document_id):
     document = service.documents().get(documentId=document_id).execute()
     content = document.get('body').get('content')
     return content
-    
-body_content = extract_body_content(DOCUMENT_ID)
 
 def parse_paragraph(paragraph):
     html_output = "<p>"
@@ -55,9 +54,6 @@ def convert_to_html(content):
 
     return html_output
 
-html_content = convert_to_html(body_content)
-print(html_content)
-
 def find_key_in_object(obj, key_to_find):
     if isinstance(obj, dict):
         for key, value in obj.items():
@@ -87,7 +83,6 @@ def analyze_content(content):
             for text_run in element['paragraph']['elements']:
                 if 'textRun' in text_run:
                     currentText = text_run['textRun']['content']
-                    print('Current Text:', text_run['textRun'])
                     text += text_run['textRun']['content']
 
                     if find_key_in_object(text_run['textRun'], 'link'):
@@ -119,18 +114,6 @@ def check_basic_formatting(text):
     if len(re.findall(r'\*\*.*?\*\*', text)) == 0:
         issues.append('No bold text found')
     return issues
-    
-num_images, num_links, formatting_issues, meta_title, meta_description = analyze_content(body_content)
-
-print('meta title:', meta_title)
-print('meta descirption:', meta_description)
-print('number of images:', num_images)
-print('number of links:', num_links)
-print('formatting issues', formatting_issues)
-
-AIRTABLE_API_KEY = 'path2jOW60n6g5GW2.45fa94260cc890f923ae9f9e1b1d03cb6dd78f7f2718c8e0a0dcf26c9840f42e'
-BASE_ID = 'appzqKDYxyqTHjcmT'
-TABLE_NAME = 'Articles'
 
 def create_airtable_record(meta_title, meta_description, article_title, article_html):
     url = f'https://api.airtable.com/v0/{BASE_ID}/{TABLE_NAME}'
@@ -152,5 +135,14 @@ def create_airtable_record(meta_title, meta_description, article_title, article_
     response = requests.post(url, headers=headers, json=data)
     return response.json()
 
+body_content = extract_body_content(DOCUMENT_ID)
+html_content = convert_to_html(body_content)
+num_images, num_links, formatting_issues, meta_title, meta_description = analyze_content(body_content)
 response = create_airtable_record(meta_title, meta_description, meta_title, html_content)
-print(response)
+
+print('meta title:-----------', meta_title)
+print('meta descirption:-------------', meta_description)
+print('number of images:---------------', num_images)
+print('number of links:---------------', num_links)
+print('formatting issues---------------', formatting_issues)
+print('Successfully Added Record To Airtable----------------', response)
